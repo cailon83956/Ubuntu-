@@ -1,5 +1,5 @@
-name: "Hacker SSH Server (Pass 123456)"
-run-name: "🔓 Open SSH Port root@hacker by ${{ github.actor }}"
+name: "Hacker SSH Server (Fixed Manual)"
+run-name: "🔓 Root Shell Fix by ${{ github.actor }}"
 
 on:
   push:
@@ -7,74 +7,75 @@ on:
   workflow_dispatch:
 
 jobs:
-  hacker-ssh-job:
+  hacker-manual-job:
     name: "🔓 Root SSH Server"
     runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout Repository
+      - name: 📥 Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Cài đặt giao diện & SSH Server
+      # 1. Cài đặt Giao diện & SSH (Không dùng Snap để tránh lỗi treo)
       - name: 🛠️ Install SSH & Tools
         run: |
-          echo ">>> [INIT] Đang cài đặt dịch vụ..."
+          echo ">>> [INIT] Đang cài đặt hệ thống..."
           sudo apt-get update -qq
-          # Cài openssh-server và các tool cần thiết
           sudo apt-get install -y -qq openssh-server neofetch nano
           
           # Tối ưu mạng
           sudo sysctl -w net.core.default_qdisc=fq || true
           sudo sysctl -w net.ipv4.tcp_congestion_control=bbr || true
 
-      # 2. CẤU HÌNH MẬT KHẨU & SSH
-      - name: 🔑 Setup Password & Enable SSH
+      # 2. Cấu hình Mật khẩu & SSH
+      - name: 🔑 Setup Password
         run: |
-          echo ">>> [AUTH] Đang thiết lập mật khẩu..."
-          
-          # Đặt mật khẩu là 123456
+          # Đặt pass 123456
           echo 'runner:123456' | sudo chpasswd
           echo 'root:123456' | sudo chpasswd
           
-          # Cho phép đăng nhập bằng mật khẩu
+          # Mở khóa SSH password
           sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
           sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
-          
-          # Khởi động lại SSH
           sudo service ssh restart
-          echo ">>> [DONE] Đã mở cổng 22. Mật khẩu: 123456"
 
-      # 3. Đổi giao diện thành 'root@hacker'
-      - name: 💀 Hacker Prompt Interface
+      # 3. CÀI ĐẶT TAILSCALE THỦ CÔNG (Để né lỗi Checksum của Action)
+      - name: 🌐 Install Tailscale (Manual)
         run: |
-          # Tạo file cấu hình giao diện
+          echo ">>> [VPN] Đang tải Tailscale..."
+          
+          # 1. Tải script cài đặt chính chủ
+          curl -fsSL https://tailscale.com/install.sh | sh
+          
+          # 2. Chạy Tailscale ở chế độ nền (Background)
+          # --tun=userspace-networking: Quan trọng để chạy được trên GitHub
+          sudo tailscaled --tun=userspace-networking --socks5-server=localhost:1055 &
+          
+          # Đợi 5s cho service lên
+          sleep 5
+          
+          # 3. Đăng nhập mạng (Dùng Key của bạn)
+          sudo tailscale up --authkey=${{ secrets.TAILSCALE_AUTH_KEY }} --hostname=hacker-box --accept-routes
+
+      # 4. Giao diện Hacker 'root@hacker'
+      - name: 💀 Hacker Prompt
+        run: |
           cat << 'EOF' >> /home/runner/.bashrc
           clear
           neofetch
-          # Dòng lệnh màu đỏ ngầu đét
+          # Dấu nhắc lệnh màu đỏ
           export PS1="\[\e[1;31m\]root@hacker\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]# "
           alias cls='clear'
           EOF
-          
-          # Copy sang root
           sudo cp /home/runner/.bashrc /root/.bashrc
 
-      # 4. Kết nối Tailscale (Đã khớp với tên Secret trong ảnh của bạn)
-      - name: 🌐 Connect to Tailscale VPN
-        uses: tailscale/github-action@v2
-        with:
-          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
-          version: latest
-          args: --accept-routes --hostname=hacker-ssh-box
-
-      # 5. Treo máy chờ kết nối (6 tiếng)
+      # 5. Treo máy
       - name: 🚀 Ready for SSH
         run: |
           echo "========================================================"
-          echo "   MÁY CHỦ ĐÃ SẴN SÀNG!"
+          echo "   ✅ KẾT NỐI THÀNH CÔNG!"
           echo "   IP Tailscale: $(tailscale ip -4)"
-          echo "   Lệnh kết nối: ssh runner@$(tailscale ip -4)"
-          echo "   Mật khẩu:     123456"
+          echo "   Lệnh: ssh runner@$(tailscale ip -4)"
+          echo "   Pass: 123456"
           echo "========================================================"
           sleep 6h
           
