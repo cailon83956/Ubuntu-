@@ -1,5 +1,5 @@
-name: Ultimate Security Environment (No Snap Hang)
-run-name: 💀 Deploying Security Lab (Fixed) by ${{ github.actor }}
+name: Hacker SSH Server (Pass: 123456)
+run-name: 🔓 Open SSH Port 'root@hacker' by ${{ github.actor }}
 
 on:
   push:
@@ -7,79 +7,74 @@ on:
   workflow_dispatch:
 
 jobs:
-  super-hacker-job:
-    name: ⚡ Stable Security Runner
+  hacker-ssh-job:
+    name: 🔓 Root SSH Server
     runs-on: ubuntu-latest
     
-    env:
-      DEBIAN_FRONTEND: noninteractive
-      OpenCL_VENDOR_PATH: /etc/OpenCL/vendors
-
     steps:
-      # 1. Lấy code về
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Khởi tạo & Tối ưu Kernel
-      - name: 🛠️ System Tuning & Optimization
+      # 1. Cài đặt giao diện & SSH Server
+      - name: 🛠️ Install SSH & Tools
         run: |
-          echo ">>> [INIT] Nâng cấp hệ thống..."
-          # Loại bỏ snapd khỏi quá trình update để tránh bị treo
-          sudo apt-mark hold snapd
+          echo ">>> [INIT] Đang cài đặt dịch vụ..."
           sudo apt-get update -qq
+          # Cài openssh-server để mở cổng 22
+          sudo apt-get install -y -qq openssh-server neofetch nano
           
-          # Cài các gói cơ bản + thư viện OpenCL
-          sudo apt-get install -y -qq build-essential curl wget git htop neofetch \
-            software-properties-common ocl-icd-libopencl1 pocl-opencl-icd
-
-          # Tối ưu mạng TCP BBR
-          echo ">>> [TUNING] Kích hoạt TCP BBR..."
+          # Tối ưu mạng
           sudo sysctl -w net.core.default_qdisc=fq || true
           sudo sysctl -w net.ipv4.tcp_congestion_control=bbr || true
 
-      # 3. CÀI ĐẶT VŨ KHÍ BẢO MẬT (Đã thay Snap bằng APT để không bị lỗi)
-      - name: 💀 Install Security Tools
+      # 2. CẤU HÌNH MẬT KHẨU & SSH (Quan trọng)
+      - name: 🔑 Setup Password & Enable SSH
         run: |
-          echo ">>> [INSTALL] Đang cài đặt bộ công cụ (APT Version)..."
+          echo ">>> [AUTH] Đang thiết lập mật khẩu..."
           
-          # Cài Hashcat, Hydra và John the Ripper bằng APT (Nhanh & Ổn định)
-          sudo apt-get install -y hashcat hydra john
+          # 1. Đặt mật khẩu cho user 'runner' là 123456
+          echo 'runner:123456' | sudo chpasswd
+          # Đặt luôn cho 'root' (nếu cần)
+          echo 'root:123456' | sudo chpasswd
           
-          # Tải wordlist RockYou về dùng luôn
-          echo ">>> [DATA] Đang tải wordlist RockYou..."
-          wget -q https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+          # 2. Cấu hình file sshd_config để cho phép đăng nhập bằng mật khẩu
+          # (Mặc định GitHub chặn password login, phải mở ra)
+          sudo sed -i 's/PasswordAuthentication no/PasswordAuthentication yes/g' /etc/ssh/sshd_config
+          sudo sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/g' /etc/ssh/sshd_config
           
-          # Kiểm tra phiên bản
-          echo "------------------------------------------------"
-          echo "Hashcat Version:"
-          hashcat --version
-          echo "John Version:"
-          john --version
-          echo "------------------------------------------------"
+          # 3. Khởi động lại dịch vụ SSH để áp dụng
+          sudo service ssh restart
+          
+          echo ">>> [DONE] Đã mở cổng 22. Mật khẩu là: 123456"
 
-      # 4. Kết nối Tailscale (Giữ nguyên khóa bí mật của bạn)
+      # 3. Đổi giao diện thành 'root@hacker'
+      - name: 💀 Hacker Prompt Interface
+        run: |
+          cat << 'EOF' >> /home/runner/.bashrc
+          clear
+          neofetch
+          # Dòng lệnh màu đỏ ngầu đét
+          export PS1="\[\e[1;31m\]root@hacker\[\e[0m\]:\[\e[1;34m\]\w\[\e[0m\]# "
+          alias cls='clear'
+          EOF
+          sudo cp /home/runner/.bashrc /root/.bashrc
+
+      # 4. Kết nối Tailscale
       - name: 🌐 Connect to Tailscale VPN
         uses: tailscale/github-action@v2
         with:
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
           version: latest
-          args: --accept-routes --hostname=github-security-lab
+          args: --accept-routes --hostname=hacker-ssh-box
 
-      # 5. Benchmark (Test sức mạnh)
-      - name: 🔥 Hashrate Benchmark
+      # 5. Treo máy chờ kết nối
+      - name: 🚀 Ready for SSH
         run: |
-          echo ">>> [POWER] Kiểm tra tốc độ xử lý Hash..."
-          # Test tốc độ Hashcat (MD5)
-          timeout 30s hashcat -b -m 0 -D 1 || true
-          
-          # Test tốc độ John
-          john --test=0
-
-      # 6. Treo máy để SSH
-      - name: 🚀 Lab Ready - Waiting for SSH
-        run: |
-          echo ">>> [INFO] IP Tailscale của máy này:"
-          tailscale ip -4
-          echo ">>> [READY] Máy đã sẵn sàng! Hãy SSH vào ngay."
+          echo "========================================================"
+          echo "   MÁY CHỦ ĐÃ SẴN SÀNG!"
+          echo "   IP Tailscale: $(tailscale ip -4)"
+          echo "   Lệnh kết nối: ssh runner@$(tailscale ip -4)"
+          echo "   Mật khẩu:     123456"
+          echo "========================================================"
           sleep 6h
           
