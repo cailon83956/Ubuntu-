@@ -1,5 +1,5 @@
-name: Ultimate Security Environment (Hashcat + John)
-run-name: 💀 Deploying Security Lab by ${{ github.actor }}
+name: Ultimate Security Environment (No Snap Hang)
+run-name: 💀 Deploying Security Lab (Fixed) by ${{ github.actor }}
 
 on:
   push:
@@ -8,12 +8,11 @@ on:
 
 jobs:
   super-hacker-job:
-    name: ⚡ Power Security Runner
+    name: ⚡ Stable Security Runner
     runs-on: ubuntu-latest
     
     env:
       DEBIAN_FRONTEND: noninteractive
-      # Tối ưu cho Hashcat chạy trên CPU (Vì GitHub Runner không có GPU rời)
       OpenCL_VENDOR_PATH: /etc/OpenCL/vendors
 
     steps:
@@ -21,73 +20,66 @@ jobs:
       - name: 📥 Checkout Repository
         uses: actions/checkout@v4
 
-      # 2. Khởi tạo & Tối ưu Kernel (Mode "Cực Mạnh")
+      # 2. Khởi tạo & Tối ưu Kernel
       - name: 🛠️ System Tuning & Optimization
         run: |
           echo ">>> [INIT] Nâng cấp hệ thống..."
+          # Loại bỏ snapd khỏi quá trình update để tránh bị treo
+          sudo apt-mark hold snapd
           sudo apt-get update -qq
           
-          # Cài các gói cơ bản + thư viện OpenCL cho Hashcat
+          # Cài các gói cơ bản + thư viện OpenCL
           sudo apt-get install -y -qq build-essential curl wget git htop neofetch \
             software-properties-common ocl-icd-libopencl1 pocl-opencl-icd
 
-          # Tối ưu mạng TCP BBR để kết nối VPN mượt nhất
+          # Tối ưu mạng TCP BBR
           echo ">>> [TUNING] Kích hoạt TCP BBR..."
           sudo sysctl -w net.core.default_qdisc=fq || true
           sudo sysctl -w net.ipv4.tcp_congestion_control=bbr || true
 
-      # 3. CÀI ĐẶT VŨ KHÍ BẢO MẬT (Hashcat, John, Hydra)
-      - name: 💀 Install Security Tools (Hashcat & John)
+      # 3. CÀI ĐẶT VŨ KHÍ BẢO MẬT (Đã thay Snap bằng APT để không bị lỗi)
+      - name: 💀 Install Security Tools
         run: |
-          echo ">>> [INSTALL] Đang cài đặt bộ công cụ..."
+          echo ">>> [INSTALL] Đang cài đặt bộ công cụ (APT Version)..."
           
-          # Cài Hashcat & Hydra
-          sudo apt-get install -y hashcat hydra
+          # Cài Hashcat, Hydra và John the Ripper bằng APT (Nhanh & Ổn định)
+          sudo apt-get install -y hashcat hydra john
           
-          # Cài John the Ripper (Bản Snap thường mới hơn và đủ tính năng hơn apt mặc định)
-          sudo snap install john-the-ripper
-
-          # Tải wordlist rockyou.txt (Huyền thoại) về sẵn để dùng luôn
+          # Tải wordlist RockYou về dùng luôn
           echo ">>> [DATA] Đang tải wordlist RockYou..."
           wget -q https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
           
-          # Show phiên bản để kiểm tra độ uy tín
+          # Kiểm tra phiên bản
           echo "------------------------------------------------"
           echo "Hashcat Version:"
           hashcat --version
           echo "John Version:"
-          /snap/bin/john-the-ripper --version
+          john --version
           echo "------------------------------------------------"
 
-      # 4. Kết nối Tailscale (Sử dụng đúng Secret của bạn)
+      # 4. Kết nối Tailscale (Giữ nguyên khóa bí mật của bạn)
       - name: 🌐 Connect to Tailscale VPN
         uses: tailscale/github-action@v2
         with:
-          # ĐÂY LÀ CHỖ QUAN TRỌNG: Khớp với ảnh bạn gửi
           authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
           version: latest
           args: --accept-routes --hostname=github-security-lab
 
-      # 5. Benchmark (Test sức mạnh CPU khi chạy Hash)
+      # 5. Benchmark (Test sức mạnh)
       - name: 🔥 Hashrate Benchmark
         run: |
-          echo ">>> [POWER] Kiểm tra tốc độ xử lý Hash (Benchmark)..."
-          
-          # Test thử tốc độ Hashcat (MD5)
-          # Lưu ý: Chạy trên CPU nên sẽ không nhanh bằng GPU rời, nhưng vẫn rất mạnh
+          echo ">>> [POWER] Kiểm tra tốc độ xử lý Hash..."
+          # Test tốc độ Hashcat (MD5)
           timeout 30s hashcat -b -m 0 -D 1 || true
           
-          # Test thử John
-          /snap/bin/john-the-ripper --test=0
+          # Test tốc độ John
+          john --test=0
 
-      # 6. Treo máy (Keep Alive) để bạn SSH vào nghịch
+      # 6. Treo máy để SSH
       - name: 🚀 Lab Ready - Waiting for SSH
         run: |
           echo ">>> [INFO] IP Tailscale của máy này:"
           tailscale ip -4
-          echo ">>> [READY] Máy đã sẵn sàng! Bạn có thể SSH vào ngay bây giờ."
-          
-          # Lệnh này giúp máy không bị tắt ngay, chờ bạn vào điều khiển
-          # (Lưu ý: GitHub giới hạn tối đa 6 tiếng mỗi lần chạy)
+          echo ">>> [READY] Máy đã sẵn sàng! Hãy SSH vào ngay."
           sleep 6h
           
