@@ -1,0 +1,93 @@
+name: Ultimate Security Environment (Hashcat + John)
+run-name: 💀 Deploying Security Lab by ${{ github.actor }}
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  super-hacker-job:
+    name: ⚡ Power Security Runner
+    runs-on: ubuntu-latest
+    
+    env:
+      DEBIAN_FRONTEND: noninteractive
+      # Tối ưu cho Hashcat chạy trên CPU (Vì GitHub Runner không có GPU rời)
+      OpenCL_VENDOR_PATH: /etc/OpenCL/vendors
+
+    steps:
+      # 1. Lấy code về
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      # 2. Khởi tạo & Tối ưu Kernel (Mode "Cực Mạnh")
+      - name: 🛠️ System Tuning & Optimization
+        run: |
+          echo ">>> [INIT] Nâng cấp hệ thống..."
+          sudo apt-get update -qq
+          
+          # Cài các gói cơ bản + thư viện OpenCL cho Hashcat
+          sudo apt-get install -y -qq build-essential curl wget git htop neofetch \
+            software-properties-common ocl-icd-libopencl1 pocl-opencl-icd
+
+          # Tối ưu mạng TCP BBR để kết nối VPN mượt nhất
+          echo ">>> [TUNING] Kích hoạt TCP BBR..."
+          sudo sysctl -w net.core.default_qdisc=fq || true
+          sudo sysctl -w net.ipv4.tcp_congestion_control=bbr || true
+
+      # 3. CÀI ĐẶT VŨ KHÍ BẢO MẬT (Hashcat, John, Hydra)
+      - name: 💀 Install Security Tools (Hashcat & John)
+        run: |
+          echo ">>> [INSTALL] Đang cài đặt bộ công cụ..."
+          
+          # Cài Hashcat & Hydra
+          sudo apt-get install -y hashcat hydra
+          
+          # Cài John the Ripper (Bản Snap thường mới hơn và đủ tính năng hơn apt mặc định)
+          sudo snap install john-the-ripper
+
+          # Tải wordlist rockyou.txt (Huyền thoại) về sẵn để dùng luôn
+          echo ">>> [DATA] Đang tải wordlist RockYou..."
+          wget -q https://github.com/brannondorsey/naive-hashcat/releases/download/data/rockyou.txt
+          
+          # Show phiên bản để kiểm tra độ uy tín
+          echo "------------------------------------------------"
+          echo "Hashcat Version:"
+          hashcat --version
+          echo "John Version:"
+          /snap/bin/john-the-ripper --version
+          echo "------------------------------------------------"
+
+      # 4. Kết nối Tailscale (Sử dụng đúng Secret của bạn)
+      - name: 🌐 Connect to Tailscale VPN
+        uses: tailscale/github-action@v2
+        with:
+          # ĐÂY LÀ CHỖ QUAN TRỌNG: Khớp với ảnh bạn gửi
+          authkey: ${{ secrets.TAILSCALE_AUTH_KEY }}
+          version: latest
+          args: --accept-routes --hostname=github-security-lab
+
+      # 5. Benchmark (Test sức mạnh CPU khi chạy Hash)
+      - name: 🔥 Hashrate Benchmark
+        run: |
+          echo ">>> [POWER] Kiểm tra tốc độ xử lý Hash (Benchmark)..."
+          
+          # Test thử tốc độ Hashcat (MD5)
+          # Lưu ý: Chạy trên CPU nên sẽ không nhanh bằng GPU rời, nhưng vẫn rất mạnh
+          timeout 30s hashcat -b -m 0 -D 1 || true
+          
+          # Test thử John
+          /snap/bin/john-the-ripper --test=0
+
+      # 6. Treo máy (Keep Alive) để bạn SSH vào nghịch
+      - name: 🚀 Lab Ready - Waiting for SSH
+        run: |
+          echo ">>> [INFO] IP Tailscale của máy này:"
+          tailscale ip -4
+          echo ">>> [READY] Máy đã sẵn sàng! Bạn có thể SSH vào ngay bây giờ."
+          
+          # Lệnh này giúp máy không bị tắt ngay, chờ bạn vào điều khiển
+          # (Lưu ý: GitHub giới hạn tối đa 6 tiếng mỗi lần chạy)
+          sleep 6h
+          
